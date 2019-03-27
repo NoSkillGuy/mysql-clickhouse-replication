@@ -1,2 +1,2 @@
 # mysql-clickhouse-replication
-To create a ClickHouse slave for Mysql
+GOAL: To create a ClickHouse slave for Mysql with real time replication

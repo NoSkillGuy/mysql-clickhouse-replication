@@ -1,0 +1,6 @@
+setuptools
+mysqlclient
+mysql-replication
+clickhouse-driver
+configobj
+clickhouse-driver
