@@ -93,7 +93,11 @@ class Mysql2clickhousesql(object):
         pass
 
     def run_sql_on_clickhouse(self, sql):
+        client = Client('localhost')
         print(sql)
+        client.execute(sql)
+        
+
 
 def callbinlog2clickhousesql(connection_settings=None, 
                              start_file=None, 

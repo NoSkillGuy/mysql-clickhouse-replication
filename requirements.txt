@@ -4,3 +4,4 @@ mysql-replication
 clickhouse-driver
 configobj
 clickhouse-driver
+python-daemon
