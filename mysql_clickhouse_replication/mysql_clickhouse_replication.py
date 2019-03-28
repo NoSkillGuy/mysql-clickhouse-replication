@@ -7,6 +7,7 @@ from .mysql_clickhouse_replication_util import command_line_args, concat_sql_fro
 import pymysql.cursors
 from pprint import pprint
 from clickhouse_driver import Client
+import os
 
 class Mysql2clickhousesql(object):
 
@@ -92,7 +93,10 @@ class Mysql2clickhousesql(object):
     def run_sql_on_clickhouse(self, sql):
         client = Client('localhost')
         print(sql)
-        client.execute(sql)
+        clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query="{}"".format(sql)
+        print(clickhouse_sql)
+        os.system(clickhouse_sql)
+        # client.execute(sql)
         
 
 
