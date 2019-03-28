@@ -8,6 +8,7 @@ import pymysql.cursors
 from pprint import pprint
 from clickhouse_driver import Client
 import os
+from mysql_clickhouse_replication.tablesqlbuilder import TableSQLBuilder
 
 class Mysql2clickhousesql(object):
 
@@ -54,6 +55,7 @@ class Mysql2clickhousesql(object):
                 raise ValueError('missing server_id in %s:%s' % (self.conn_setting['host'], self.conn_setting['port']))
 
     def process_binlog(self):
+        pprint(vars(self))
         stream = BinLogStreamReader(connection_settings=self.conn_setting,
                                     server_id=self.server_id,
                                     log_file=self.start_file, 
@@ -66,6 +68,7 @@ class Mysql2clickhousesql(object):
 
         tmp_file = create_unique_file('%s.%s' % (self.conn_setting['host'], self.conn_setting['port']))
         with temp_open(tmp_file, "w") as f_tmp, self.connection as cursor:
+
             for binlog_event in stream:
 
                 if isinstance(binlog_event, QueryEvent) and binlog_event.query == 'BEGIN':
@@ -93,7 +96,7 @@ class Mysql2clickhousesql(object):
     def run_sql_on_clickhouse(self, sql):
         client = Client('localhost')
         print(sql)
-        clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query="{}"".format(sql)
+        clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query=\"{}\"".format(sql).replace('`','')
         print(clickhouse_sql)
         os.system(clickhouse_sql)
         # client.execute(sql)
