@@ -4,4 +4,3 @@ mysql-replication
 clickhouse-driver
 configobj
 clickhouse-driver
-python-daemon==2.1.2

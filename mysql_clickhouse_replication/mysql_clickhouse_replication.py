@@ -1,5 +1,3 @@
-import daemon
-import threading
 import sys
 import datetime
 import pymysql
@@ -63,7 +61,6 @@ class Mysql2clickhousesql(object):
                                     only_tables=self.only_tables, 
                                     resume_stream=True, 
                                     blocking=True)
-        pprint(stream)
         e_start_pos, last_pos = stream.log_pos, stream.log_pos
 
         tmp_file = create_unique_file('%s.%s' % (self.conn_setting['host'], self.conn_setting['port']))
