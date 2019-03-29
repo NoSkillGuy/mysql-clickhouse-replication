@@ -93,7 +93,7 @@ class Mysql2clickhousesql(object):
     def run_sql_on_clickhouse(self, sql):
         client = Client('localhost')
         print(sql)
-        clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query="{}"".format(sql)
+        clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query=\"{}\"".format(sql).replace('`','')
         print(clickhouse_sql)
         os.system(clickhouse_sql)
         # client.execute(sql)
