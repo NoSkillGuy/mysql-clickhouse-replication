@@ -47,7 +47,6 @@ def temp_open(filename, mode):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser(description='use Mysql binlogs to replicate to clickhouse', add_help=False)
     
     mysql_connect_setting = parser.add_argument_group('Mysql connect setting')
@@ -59,6 +58,8 @@ def parse_args():
                                  help='MySQL Password to use', default='')
     mysql_connect_setting.add_argument('-mP', '--mysql_port', dest='mysql_port', type=int,
                                  help='MySQL port to use', default=3306)
+    mysql_connect_setting.add_argument('-mc', '--mysql_charset', dest='mysql_charset', type=str,
+                                 help='MySQL charset to use', default='utf8')
 
     clikhouse_connect_setting = parser.add_argument_group('Clickhouse connect setting')
     clikhouse_connect_setting.add_argument('-ch', '--clickhouse_host', dest='clickhouse_host', type=str,
@@ -103,13 +104,19 @@ def command_line_args(args):
     if args.help or need_print_help:
         parser.print_help()
         sys.exit(1)
+    if not args.mysql_user:
+        args.mysql_user = getpass.getuser(prompt='MySQL Username: ')
+
     if not args.mysql_password:
-        args.mysql_password = getpass.getpass()
+        args.mysql_password = getpass.getpass(prompt='MySQL Password: ')
     else:
         args.mysql_password = args.mysql_password[0]
 
+    if not args.clickhouse_user:
+        args.clickhouse_user = getpass.getuser(prompt='ClickHouse Username: ')
+
     if not args.clickhouse_password:
-        args.clickhouse_password = 'getpass.getpass()'
+        args.clickhouse_password = getpass.getpass(prompt='ClickHouse Password: ')
     else:
         args.clickhouse_password = args.clickhouse_password[0]
     return args

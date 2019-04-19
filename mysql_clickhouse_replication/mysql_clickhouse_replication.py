@@ -132,7 +132,7 @@ def main():
             'port': args.mysql_port, 
             'user': args.mysql_user, 
             'passwd': args.mysql_password, 
-            'charset': 'utf8'
+            'charset': args.mysql_charset
             }
     clickhouse_conn_setting = {
             'host': args.clickhouse_host, 
