@@ -12,7 +12,8 @@ import os
 class Mysql2clickhousesql(object):
 
     def __init__(self, 
-                 connection_settings, 
+                 mysql_connection_settings, 
+                 clickhouse_connection_settings,
                  start_file=None, 
                  start_pos=None, 
                  only_schemas=None, 
@@ -25,7 +26,8 @@ class Mysql2clickhousesql(object):
         if not start_file:
             raise ValueError('Lack of parameter: start_file')
 
-        self.conn_setting = connection_settings
+        self.mysql_conn_setting = mysql_connection_settings
+        self.clickhouse_conn_setting = clickhouse_connection_settings
         self.start_file = start_file
         self.start_pos = start_pos if start_pos else 4
         self.only_schemas = only_schemas if only_schemas else None
@@ -35,7 +37,7 @@ class Mysql2clickhousesql(object):
         self.sql_type = [t.upper() for t in sql_type] if sql_type else []
 
         self.binlogList = []
-        self.connection = pymysql.connect(**self.conn_setting)
+        self.connection = pymysql.connect(**self.mysql_conn_setting)
         with self.connection as cursor:
             cursor.execute("SHOW MASTER STATUS")
             self.eof_file, self.eof_pos = cursor.fetchone()[:2]
@@ -51,10 +53,10 @@ class Mysql2clickhousesql(object):
             cursor.execute("SELECT @@server_id")
             self.server_id = cursor.fetchone()[0]
             if not self.server_id:
-                raise ValueError('missing server_id in %s:%s' % (self.conn_setting['host'], self.conn_setting['port']))
+                raise ValueError('missing server_id in %s:%s' % (self.mysql_conn_setting['host'], self.mysql_conn_setting['port']))
 
     def process_binlog(self):
-        stream = BinLogStreamReader(connection_settings=self.conn_setting,
+        stream = BinLogStreamReader(connection_settings=self.mysql_conn_setting,
                                     server_id=self.server_id,
                                     log_file=self.start_file, 
                                     log_pos=self.start_pos, 
@@ -64,7 +66,7 @@ class Mysql2clickhousesql(object):
                                     blocking=True)
         e_start_pos, last_pos = stream.log_pos, stream.log_pos
 
-        tmp_file = create_unique_file('%s.%s' % (self.conn_setting['host'], self.conn_setting['port']))
+        tmp_file = create_unique_file('%s.%s' % (self.mysql_conn_setting['host'], self.mysql_conn_setting['port']))
         with temp_open(tmp_file, "w") as f_tmp, self.connection as cursor:
             for binlog_event in stream:
 
@@ -92,15 +94,19 @@ class Mysql2clickhousesql(object):
 
     def run_sql_on_clickhouse(self, sql):
         client = Client('localhost')
+        # clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query=\"{}\"".format(sql).replace('`','')
+        clickhouse_sql = "docker run -it --rm --link clickhouse-server-19-4-3-11:clickhouse-server yandex/clickhouse-client:19.4.3.11 --host clickhouse-server --query=\"{}\"".format(sql).replace('`','')
+        print("------- MYSQL -------");
         print(sql)
-        clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query=\"{}\"".format(sql).replace('`','')
+        print("------- CLICKHOUSE -------");
         print(clickhouse_sql)
         os.system(clickhouse_sql)
         # client.execute(sql)
         
 
 
-def callbinlog2clickhousesql(connection_settings=None, 
+def callbinlog2clickhousesql(mysql_connection_settings=None,
+                             clickhouse_connection_settings=None, 
                              start_file=None, 
                              start_pos=None,
                              only_schemas=None, 
@@ -108,27 +114,36 @@ def callbinlog2clickhousesql(connection_settings=None,
                              stop_never=False, 
                              only_dml=True, 
                              sql_type=None):
-    binlog2clickhousesql = Mysql2clickhousesql(connection_settings=connection_settings, 
-                                                start_file=start_file, 
-                                                start_pos=start_pos,
-                                                only_schemas=only_schemas, 
-                                                only_tables=only_tables,
-                                                stop_never=stop_never,
-                                                only_dml=only_dml, 
-                                                sql_type=sql_type,
-                                                )
+    binlog2clickhousesql = Mysql2clickhousesql( 
+        mysql_connection_settings=mysql_connection_settings,
+        clickhouse_connection_settings=clickhouse_connection_settings,
+        start_file=start_file, 
+        start_pos=start_pos,
+        only_schemas=only_schemas, 
+        only_tables=only_tables,
+        stop_never=stop_never,
+        only_dml=only_dml, 
+        sql_type=sql_type,
+    )
     binlog2clickhousesql.process_binlog()
 
 def main():
     args = command_line_args(sys.argv[1:])
-    conn_setting = {
-            'host': args.host, 
-            'port': args.port, 
-            'user': args.user, 
-            'passwd': args.password, 
+    mysql_conn_setting = {
+            'host': args.mysql_host, 
+            'port': args.mysql_port, 
+            'user': args.mysql_user, 
+            'passwd': args.mysql_password, 
             'charset': 'utf8'
             }
-    callbinlog2clickhousesql(connection_settings=conn_setting, 
+    clickhouse_conn_setting = {
+            'host': args.clickhouse_host, 
+            'port': args.clickhouse_port, 
+            'user': args.clickhouse_user, 
+            'passwd': args.clickhouse_password
+            }
+    callbinlog2clickhousesql(mysql_connection_settings=mysql_conn_setting, 
+                             clickhouse_connection_settings=clickhouse_conn_setting,
                              start_file=args.start_file, 
                              start_pos=args.start_pos,
                              only_schemas=args.databases, 

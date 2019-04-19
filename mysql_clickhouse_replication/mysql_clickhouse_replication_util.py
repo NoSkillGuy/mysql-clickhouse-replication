@@ -50,15 +50,25 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description='use Mysql binlogs to replicate to clickhouse', add_help=False)
     
-    connect_setting = parser.add_argument_group('connect setting')
-    connect_setting.add_argument('-h', '--host', dest='host', type=str,
+    mysql_connect_setting = parser.add_argument_group('Mysql connect setting')
+    mysql_connect_setting.add_argument('-mh', '--mysql_host', dest='mysql_host', type=str,
                                  help='Host the MySQL database server located', default='127.0.0.1')
-    connect_setting.add_argument('-u', '--user', dest='user', type=str,
+    mysql_connect_setting.add_argument('-mu', '--mysql_user', dest='mysql_user', type=str,
                                  help='MySQL Username to log in as', default='root')
-    connect_setting.add_argument('-p', '--password', dest='password', type=str, nargs='*',
+    mysql_connect_setting.add_argument('-mp', '--mysql_password', dest='mysql_password', type=str, nargs='*',
                                  help='MySQL Password to use', default='')
-    connect_setting.add_argument('-P', '--port', dest='port', type=int,
+    mysql_connect_setting.add_argument('-mP', '--mysql_port', dest='mysql_port', type=int,
                                  help='MySQL port to use', default=3306)
+
+    clikhouse_connect_setting = parser.add_argument_group('Clickhouse connect setting')
+    clikhouse_connect_setting.add_argument('-ch', '--clickhouse_host', dest='clickhouse_host', type=str,
+                                 help='Host the Clickhouse database server located', default='127.0.0.1')
+    clikhouse_connect_setting.add_argument('-cu', '--clickhouse_user', dest='clickhouse_user', type=str,
+                                 help='Clickhouse Username to log in as', default='root')
+    clikhouse_connect_setting.add_argument('-cp', '--clickhouse_password', dest='clickhouse_password', type=str, nargs='*',
+                                 help='Clickhouse Password to use', default='')
+    clikhouse_connect_setting.add_argument('-cP', '--clickhouse_port', dest='clickhouse_port', type=int,
+                                 help='Clickhouse port to use', default=9000)
     
     interval = parser.add_argument_group('interval filter')
     interval.add_argument('--start-file', dest='start_file', type=str, help='Start binlog file to be parsed')
@@ -93,10 +103,15 @@ def command_line_args(args):
     if args.help or need_print_help:
         parser.print_help()
         sys.exit(1)
-    if not args.password:
-        args.password = getpass.getpass()
+    if not args.mysql_password:
+        args.mysql_password = getpass.getpass()
     else:
-        args.password = args.password[0]
+        args.mysql_password = args.mysql_password[0]
+
+    if not args.clickhouse_password:
+        args.clickhouse_password = 'getpass.getpass()'
+    else:
+        args.clickhouse_password = args.clickhouse_password[0]
     return args
 
 
@@ -148,13 +163,37 @@ def concat_sql_from_binlog_event(cursor, binlog_event, row=None, e_start_pos=Non
         pattern = generate_sql_pattern(binlog_event, row=row)
         sql = cursor.mogrify(pattern['template'], pattern['values'])
     elif isinstance(binlog_event, QueryEvent) and binlog_event.query != 'BEGIN' and binlog_event.query != 'COMMIT':
-        if binlog_event.schema:
-            sql = 'USE {0};\n'.format(binlog_event.schema)
-        sql += '{0};'.format(fix_object(binlog_event.query))
+        pprint(binlog_event)
+        pprint(vars(binlog_event))
+        split_binlog_event_query = binlog_event.query.split(' ')
+        if split_binlog_event_query[0] == 'create':
+            if split_binlog_event_query[1] == 'database':
+                sql += '{0};'.format(fix_object(binlog_event.query))
+                # sql += create_sql_query(sql)
+            # elif split_binlog_event_query[1] == 'table':
+                # sql += '{0};'.format(fix_object(binlog_event.query))
+                # sql += create_sql_query('select 1')
+        elif split_binlog_event_query[0] == 'truncate':
+            sql += 'truncate table `{0}`.`{1}`;'.format(binlog_event.schema.recv(1024).decode(),fix_object(binlog_event.query).split(' ')[1])            
+            # sql += create_sql_query(sql)
+
+            # sql = create_sql_query(sql)
+
+        # if binlog_event.schema:
+        #     sql = 'USE {0};\n'.format(binlog_event.schema)
+        # sql += '{0};'.format(fix_object(binlog_event.query))
 
     return sql
 
+# def create_sql_query(sql, binlog_event, type_of_event):
+#     if type_of_event == 'truncate':
+#         sql += '{0};'.format(fix_object(binlog_event.query))
+#     else:
+#         sql += '{0};'.format(fix_object(binlog_event.query))
+#     return sql
+
 def generate_sql_pattern(binlog_event, row=None):
+    print(binlog_event)
     template = ''
     values = []
     if isinstance(binlog_event, WriteRowsEvent):
