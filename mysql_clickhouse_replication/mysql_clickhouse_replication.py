@@ -93,15 +93,13 @@ class Mysql2clickhousesql(object):
         pass
 
     def run_sql_on_clickhouse(self, sql):
-        client = Client('localhost')
+        client = Client(host='localhost')
         # clickhouse_sql = "clickhouse-client -h 127.0.0.1 --query=\"{}\"".format(sql).replace('`','')
-        clickhouse_sql = "docker run -it --rm --link clickhouse-server-19-4-3-11:clickhouse-server yandex/clickhouse-client:19.4.3.11 --host clickhouse-server --query=\"{}\"".format(sql).replace('`','')
-        print("------- MYSQL -------");
+        # clickhouse_sql = "docker run -it --rm --link clickhouse-server-19-4-3-11:clickhouse-server yandex/clickhouse-client:19.4.3.11 --host clickhouse-server --query=\"{}\"".format(sql).replace('`','')
+        print("------- CLICKHOUSE SQL -------");
         print(sql)
-        print("------- CLICKHOUSE -------");
-        print(clickhouse_sql)
-        os.system(clickhouse_sql)
-        # client.execute(sql)
+        # os.system(clickhouse_sql)
+        client.execute(sql)
         
 
 
