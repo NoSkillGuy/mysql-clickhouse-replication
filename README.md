@@ -9,6 +9,30 @@ echo "Run the below commands in Mysql Console"
 echo "CREATE USER '$MYSQL_CLICKHOUSE_USER'@'localhost' IDENTIFIED BY '$MYSQL_CLICKHOUSE_PASSWORD';"
 echo "GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '$MYSQL_CLICKHOUSE_USER'@'localhost';"
 ```
+
+# Creating ClickHouse User
+```
+cat << EOF
+<?xml version="1.0"?>
+<yandex>
+    <users>
+        <mysql_clickhouse_slave>
+            <password>$MYSQL_CLICKHOUSE_PASSWORD</password>
+            <networks incl="networks" replace="replace">
+                <ip>::/0</ip>
+            </networks>
+
+            <!-- Settings profile for user. -->
+            <profile>default</profile>
+
+            <!-- Quota for user. -->
+            <quota>default</quota>
+        </mysql_clickhouse_slave>
+    </users>
+</yandex>
+EOF
+```
+
 # prerequisites
 
 1. Mysql (refer: https://dev.mysql.com/downloads/mysql/)
